@@ -1,0 +1,219 @@
+---
+title: "Research in Computing"
+author: "Vijit Laxman Chekkala"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+runtime: shiny
+---
+
+```{r global, include=FALSE}
+
+library(ggplot2)
+library(plotly)
+library(plyr)
+library(flexdashboard)
+library(mlbench)
+library(caret)
+library(dplyr)
+library(GGally)
+library(plyr)
+library(psych)
+library(shiny)
+# create some data
+df <- read.csv("H.csv")
+df_target <- read.csv("HH_target.csv")
+
+#df <- select(df, -1)
+#df_target <- select(df_target, -1)
+
+data_final <- cbind(df,df_target)
+
+data_final$Coolers<-as.factor(data_final$Coolers) 
+data_final$Valves<-as.factor(data_final$Valves) 
+data_final$Pump_Leakage<-as.factor(data_final$Pump_Leakage) 
+data_final$Accumulator<-as.factor(data_final$Accumulator)
+data_final$Stable<-as.factor(data_final$Stable) 
+
+str(df)
+
+#percentage
+str(data_final)
+per_data <- data_final %>%
+  count(Coolers)%>%
+  mutate(per=n/sum(n), per_label=paste0(round(per*100),"%"))
+```
+
+Data Exploration
+=======================================================================
+
+Row
+-----------------------------------------------------------------------
+
+### Correlation Matrix
+
+```{r}
+#Add control to the heat map
+ggcorr(df,
+       nbreaks = 6,
+       low = "steelblue",
+       mid = "white",
+       high = "darkred",
+       geom = "circle")
+```
+
+
+Histogram
+=======================================================================
+
+Row {.tabset .tabset-fade}
+-----------------------------------------------------------------------
+
+### Histogram of Independent variables
+
+```{r}
+# Histogram
+
+library(plyr)
+library(psych)
+ #error, not numeric
+multi.hist(df[,sapply(df, is.numeric)])
+```
+
+### Pressure sensor data
+```{r}
+# Histogram
+#hist_1 <- c(df$PS1,df$PS2,df$PS3,df$PS4,df$PS5,df$PS6)
+hist(df$PS1)
+hist(df$PS2)
+hist(df$PS3)
+hist(df$PS4)
+hist(df$PS5)
+hist(df$PS6)
+```
+
+### Temperature data
+```{r}
+# Histogram
+hist(df$TS1)
+hist(df$TS2)
+hist(df$TS3)
+hist(df$TS4)
+```
+
+### Volume flow data
+```{r}
+# Histogram
+hist(df$FS1)
+hist(df$FS2)
+```
+
+### Cooling efficiency
+```{r}
+# Histogram
+hist(df$CE)
+hist(df$CP)
+```
+
+### Pump efficiency, Vibrations and Efficiency factor
+```{r}
+# Histogram
+class(df$P1)
+hist(df$P1)
+hist(df$VS1)
+hist(df$SE1)
+```
+
+
+Variable importance using Random Forest
+=======================================================================
+
+Row {.tabset .tabset-fade}
+-----------------------------------------------------------------------
+
+### Cooler condition
+```{r}
+library(randomForest)
+ggplot(data = data_final) + 
+  geom_bar(mapping = aes(x = Coolers, y = ..prop.., group = 1), stat="count",
+           color="white",fill="lightblue") + ylab("Percentage")+
+  ggtitle("Percentage Distribution of Target \n- Cooler Condition") +
+  scale_y_continuous(labels = scales::percent_format())
+
+rf_Cooler<- randomForest(Coolers~. -Valves -Pump_Leakage -Accumulator -Stable, data=data_final)
+
+#varimp
+varImpPlot(rf_Cooler,bg = "red", pch=22)
+```
+
+### Valve condition
+
+```{r}
+ggplot(data = data_final) + 
+  geom_bar(mapping = aes(x = Valves, y = ..prop.., group = 1), stat="count",
+           color="white",fill="lightblue") + ylab("Percentage")+
+  ggtitle("Percentage Distribution of Target \n- Valve Condition") +
+  scale_y_continuous(labels = scales::percent_format())
+#valve variable importance
+rf_valve<- randomForest(Valves~. -Coolers -Pump_Leakage -Accumulator -Stable, data=data_final)
+#varimp
+varImpPlot(rf_valve,bg = "red", pch=22)
+```
+
+
+### Internal Pump Leakage
+```{r}
+ggplot(data = data_final) + 
+  geom_bar(mapping = aes(x = Pump_Leakage, y = ..prop.., group = 1), stat="count",
+           color="white",fill="lightblue") + ylab("Percentage")+
+  ggtitle("Percentage Distribution of Target \n- Internal Pump Leakage") +
+  scale_y_continuous(labels = scales::percent_format())
+#pumpleakage
+rf_pump_leakage<- randomForest(Pump_Leakage~. -Coolers -Valves -Accumulator -Stable, data=data_final)
+#varimp
+varImpPlot(rf_pump_leakage,bg = "red", pch=22)
+```
+
+### Hydraulic accumulator/bar
+```{r}
+ggplot(data = data_final) + 
+  geom_bar(mapping = aes(x = Accumulator, y = ..prop.., group = 1), stat="count",
+           color="white",fill="lightblue") + ylab("Percentage")+
+  ggtitle("Percentage Distribution of Target \n- Hydraulic accumulator/bar") +
+  scale_y_continuous(labels = scales::percent_format())
+#accumulator
+rf_accumulator<- randomForest(Accumulator~. -Coolers -Valves -Pump_Leakage -Stable, data=data_final)
+#varimp
+varImpPlot(rf_accumulator,bg = "red", pch=22)
+```
+
+### Stable Flag
+```{r}
+ggplot(data = data_final) + 
+  geom_bar(mapping = aes(x = Stable, y = ..prop.., group = 1), stat="count",
+           color="white",fill="lightblue") + ylab("Percentage")+
+  ggtitle("Percentage Distribution of Target \n- Stable Flag") +
+  scale_y_continuous(labels = scales::percent_format())
+#Stable
+rf_stable<- randomForest(Stable~., data=data_final)
+#varimp
+varImpPlot(rf_stable,bg = "red", pch=22)
+```
+
+Outliers
+=======================================================================
+
+Row {.tabset .tabset-fade}
+-----------------------------------------------------------------------
+
+### Outliers
+```{r}
+library(ggplot2)
+ggplot(stack(df), aes(x = ind, y = values)) +
+  geom_boxplot()
+```
+
+importance(rf_stable$IncNodePurity)
+IncNodePurity
+add(rf_stable)
+
