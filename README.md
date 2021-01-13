@@ -8,3 +8,6 @@ Steps for the project
 2- Perform statistical analysis using R programming language
 3- Transform the data for proper machine learning modelling
 4- Apply 5 different classification algorithms
+5- Compare different hyperparameter tuning techniques
+6- Evaluate the results
+
